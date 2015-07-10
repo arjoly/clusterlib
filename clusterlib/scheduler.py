@@ -16,6 +16,7 @@ from __future__ import unicode_literals
 import os
 import shutil
 import subprocess
+import shlex
 from xml.etree.ElementTree import XMLParser, XML
 
 
@@ -190,7 +191,8 @@ _LAUNCHER = {
 
 def submit(job_command, job_name="job", time="24:00:00", memory=4000,
            email=None, email_options=None, log_directory=None, backend="auto",
-           shell_script="#!/bin/bash"):
+           shell_script="#!/bin/bash", launch=False, cmd_encoding=None,
+           return_job_id=False):
     """Write the submission query (without script).
 
     Parameters
@@ -231,6 +233,15 @@ def submit(job_command, job_name="job", time="24:00:00", memory=4000,
 
     shell_script : str, optional (default="#!/bin/bash")
         Specify shell that is used by the script.
+
+    launch : bool, optional (default=False)
+        If true, the job is launched.
+
+    cmd_encoding : str, (default='utf-8')
+        TODO
+
+    return_job_id :bool, optional (default=False)
+        TODO
 
     Returns
     -------
@@ -287,4 +298,28 @@ def submit(job_command, job_name="job", time="24:00:00", memory=4000,
     command = (u"echo '%s\n%s' | %s %s"
                % (shell_script, job_command, launcher, " ".join(job_options)))
 
-    return command
+    if cmd_encoding is not None:
+        command = command.encode(cmd_encoding)
+
+    job_id = None
+    if launch:
+        command = shlex.split(command)
+        output = subprocess.check_output(command).decode(cmd_encoding)
+
+    if return_job_id:
+        if not launch:
+            raise ValueError("job_id can only be returned if launch is True, "
+                             "got launch=%s" % launch)
+
+        if output.startswith(u'Your job '):
+            job_id = output.split()[2]
+        elif output.startswith(u'Submitted batch job '):
+            job_id = output.split()[3]
+        else:
+            raise RuntimeError(
+                u"Failed to parse job_id from command output:\n %s\ncmd:\n%s"
+                % (command, output))
+
+        return command, job_id
+    else:
+        return command

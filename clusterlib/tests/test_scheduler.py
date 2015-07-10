@@ -22,24 +22,6 @@ from clusterlib._testing import TemporaryDirectory
 from clusterlib._testing import skip_if_no_backend
 
 
-def _check_job_id(command):
-    """Perform a dispatch and return the job id."""
-    # TODO: This utility function should be properly documented any made more
-    # robust to be included in the scheduler module itself
-    cmd_encoding = 'utf-8'
-    output = subprocess.check_output(
-        command.encode(cmd_encoding), shell=True).decode(cmd_encoding)
-    if output.startswith(u'Your job '):
-        job_id = output.split()[2]
-    elif output.startswith(u'Submitted batch job '):
-        job_id = output.split()[3]
-    else:
-        raise RuntimeError(
-            u"Failed to parse job_id from command output:\n %s\ncmd:\n%s"
-            % (command, output))
-    return job_id
-
-
 def test_auto_backend():
     """Check the backend detection logic."""
     original_env_backend = os.environ.get('CLUSTERLIB_BACKEND', None)
@@ -90,10 +72,11 @@ def test_log_output(n_trials=30):
         job_completed = False
         # Launch a sleepy SGE job
         job_name = 'ok_job'
-        command = submit(job_command="echo ok", job_name=job_name,
-                         time="700", memory=500,
-                         log_directory=temp_folder)
-        job_id = _check_job_id(command)
+        command, job_id = submit(job_command="echo ok", job_name=job_name,
+                                 time="700", memory=500,
+                                 log_directory=temp_folder,
+                                 launch=True, return_job_id=True,
+                                 cmd_encoding="utf-8")
 
         try:
             for _ in range(n_trials):
@@ -138,9 +121,11 @@ def check_job_name_queued_or_running(job_name):
         user = getuser()
 
         # Launch job
-        command = submit(job_command="sleep 600", job_name=job_name,
-                         time="700", memory=500, log_directory=temp_folder)
-        job_id = _check_job_id(command)
+        command, job_id = submit(job_command="sleep 600", job_name=job_name,
+                                 time="700", memory=500,
+                                 log_directory=temp_folder,
+                                 launch=True, return_job_id=True,
+                                 cmd_encoding="utf-8")
 
         # Assert that the job has been launched
         try:
