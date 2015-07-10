@@ -237,7 +237,7 @@ def submit(job_command, job_name="job", time="24:00:00", memory=4000,
     launch : bool, optional (default=False)
         If true, the job is launched.
 
-    cmd_encoding : str, (default='utf-8')
+    cmd_encoding : str, (default=None)
         TODO
 
     return_job_id :bool, optional (default=False)
